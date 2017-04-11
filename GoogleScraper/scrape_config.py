@@ -132,7 +132,7 @@ scrape_method = 'selenium'
 # If scraping with the own IP address should be allowed.
 # If this is set to False and you don't specify any proxies,
 # GoogleScraper cannot run.
-use_own_ip = True
+use_own_ip = False
 
 # Whether to check proxies before starting the scrape
 check_proxies = True

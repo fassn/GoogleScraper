@@ -392,7 +392,7 @@ class GoogleParser(Parser):
                 'result_container': '.ads-ad',
                 'link': 'h3 > a:first-child::attr(href)',
                 'snippet': '.ads-creative::text',
-                'title': 'h3 > a:first-child::text',
+                'title': 'h3 > a:nth-child(2)::text',
                 'visible_link': '.ads-visurl cite::text',
             }
         },

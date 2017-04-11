@@ -395,6 +395,7 @@ def main(return_results=False, parse_cmd_line=True, config_from_dict=None):
 
                     for worker in range(num_workers):
                         num_worker += 1
+                        # proxy_to_use = proxies[worker % len(proxies)]
                         workers.put(
                             ScrapeWorkerFactory(
                                 config,

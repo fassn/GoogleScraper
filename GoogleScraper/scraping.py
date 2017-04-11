@@ -370,7 +370,7 @@ class SearchEngineScrape(metaclass=abc.ABCMeta):
         """Things that need to happen before entering the search loop."""
         # check proxies first before anything
         if self.config.get('check_proxies', True) and self.proxy:
-            if not self.proxy_check():
+            if not self.proxy_check(self.proxy):
                 self.startable = False
 
     def update_proxy_status(self, status, ipinfo=None, online=True):

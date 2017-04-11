@@ -196,11 +196,13 @@ class HttpScrape(SearchEngineScrape, threading.Timer):
                                              'the proxy check.'
 
         online = False
-        status = 'Proxy check failed: {host}:{port} is not used while requesting'.format(**self.proxy.__dict__)
+        status = 'Proxy check failed: {host}:{port} is not used while requesting'.format(host=self.proxy.host, port=self.proxy.port)
         ipinfo = {}
-
         try:
-            text = self.requests.get(self.config.get('proxy_info_url')).text
+            text = self.requests.get(self.config.get('proxy_info_url'),
+                                     proxies={self.proxy.proto: 'http://' + self.proxy.host + ':' + self.proxy.port}
+                                     ).text
+
             try:
                 ipinfo = json.loads(text)
             except ValueError:
@@ -265,7 +267,10 @@ class HttpScrape(SearchEngineScrape, threading.Timer):
             super().keyword_info()
 
             request = self.requests.get(self.base_search_url + urlencode(self.search_params),
-                                        headers=self.headers, timeout=timeout)
+                                        headers=self.headers,
+                                        timeout=timeout,
+                                        proxies={'https': 'https://' + self.proxy.host + ':' + self.proxy.port}
+                                        )
 
             self.requested_at = datetime.datetime.utcnow()
             self.html = request.text

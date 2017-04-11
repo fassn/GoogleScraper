@@ -155,7 +155,7 @@ class SelScrape(SearchEngineScrape, threading.Thread):
         assert self.proxy and self.webdriver, 'Scraper instance needs valid webdriver and proxy instance to make the proxy check'
 
         online = False
-        status = 'Proxy check failed: {host}:{port} is not used while requesting'.format(**self.proxy.__dict__)
+        status = 'Proxy check failed: {host}:{port} is not used while requesting'.format(host=self.proxy.host, port=self.proxy.port)
         ipinfo = {}
 
         try:
@@ -218,6 +218,10 @@ class SelScrape(SearchEngineScrape, threading.Thread):
                 chrome_ops = webdriver.ChromeOptions()
                 chrome_ops.add_argument(
                     '--proxy-server={}://{}:{}'.format(self.proxy.proto, self.proxy.host, self.proxy.port))
+                # chrome_ops.add_argument(
+                #     '--disable-setuid-sandbox')
+                chrome_ops.add_argument(
+                    '--no-sandbox')
                 self.webdriver = webdriver.Chrome(chrome_options=chrome_ops)
             else:
                 self.webdriver = webdriver.Chrome()#service_log_path='/tmp/chromedriver_log.log')
@@ -615,7 +619,8 @@ class SelScrape(SearchEngineScrape, threading.Thread):
     def run(self):
         """Run the SelScraper."""
 
-        self._set_xvfb_display()
+        # self._set_xvfb_display()
+
 
         if not self._get_webdriver():
             raise Exception('{}: Aborting due to no available selenium webdriver.'.format(self.name))
