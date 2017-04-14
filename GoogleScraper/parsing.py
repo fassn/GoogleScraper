@@ -867,6 +867,16 @@ class DuckduckgoParser(Parser):
                 'visible_link': '.url::text'
             },
         },
+        'ads_main': {
+            'de_ip': {
+                'container': '#ads',
+                'result_container': '.result',
+                'link': '.result__title > a::attr(href)',
+                'snippet': 'result__snippet::text',
+                'title': '.result__title > a::text',
+                'visible_link': '.result__extras__url > a::text'
+            },
+        },
     }
 
     def __init__(self, *args, **kwargs):

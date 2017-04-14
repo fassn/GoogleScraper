@@ -62,9 +62,13 @@ class AsyncHttpScrape(object):
                 self.headers))
 
             if response.status == 200:
-                body = yield from response.read_and_close(decode=False)
-                self.parser = self.parser(config=self.config, html=body)
-                return self
+                # body = yield from response.read_and_close(decode=False)
+                try:
+                    body = yield from response.text()
+                    self.parser = self.parser(config=self.config, html=body)
+                    return self
+                except ClientResponseError as e:
+                    print(e)
 
             return None
 

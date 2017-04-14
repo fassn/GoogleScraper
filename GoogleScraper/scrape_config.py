@@ -225,10 +225,10 @@ sleeping_ranges = {
 # option {search_engine_name}_sleeping_ranges, then
 # only this search engine will sleep the supplied ranges.
 google_sleeping_ranges = {
-    1:  (2, 3),
-    5:  (3, 5),
-    30: (10, 20),
-    127: (30, 50),
+    1:  (10, 20),
+    5:  (30, 50),
+    30: (100, 120),
+    127: (200, 220),
 }
 
 # If the search should be simulated instead of being done.
@@ -279,7 +279,7 @@ Settings specificly for the asynchronous mode.
 """
 
 # The number of concurrent requests that are used for scraping
-max_concurrent_requests = 100
+max_concurrent_requests = 10
 
 """
 [PROXY_POLICY]

@@ -7,7 +7,6 @@ import sys
 import hashlib
 import os
 import queue
-import time
 from GoogleScraper.log import setup_logger
 from GoogleScraper.commandline import get_command_line
 from GoogleScraper.database import ScraperSearch, SERP, Link, get_session, fixtures
@@ -395,34 +394,34 @@ def main(return_results=False, parse_cmd_line=True, config_from_dict=None):
 
                 for proxy in proxies:
 
-                    for worker in range(num_workers):
+                    # for worker in range(num_workers):
 
-                        num_worker += 1
-                        workers.put(
-                                ScrapeWorkerFactory(
-                                        config,
-                                        cache_manager=cache_manager,
-                                        mode=method,
-                                        proxy=proxy,
-                                        search_engine=search_engine,
-                                        session=session,
-                                        db_lock=db_lock,
-                                        cache_lock=cache_lock,
-                                        scraper_search=scraper_search,
-                                        captcha_lock=captcha_lock,
-                                        progress_queue=q,
-                                        browser_num=num_worker
-                                )
-                        )
+                    num_worker += 1
+                    workers.put(
+                            ScrapeWorkerFactory(
+                                    config,
+                                    cache_manager=cache_manager,
+                                    mode=method,
+                                    proxy=proxy,
+                                    search_engine=search_engine,
+                                    session=session,
+                                    db_lock=db_lock,
+                                    cache_lock=cache_lock,
+                                    scraper_search=scraper_search,
+                                    captcha_lock=captcha_lock,
+                                    progress_queue=q,
+                                    browser_num=num_worker
+                            )
+                    )
 
 # here we look for suitable workers
             # for all jobs created.
             for job in scrape_jobs:
                 while True:
                     worker = workers.get()
-                    workers.put(worker)
                     if worker.is_suitabe(job):
                         worker.add_job(job)
+                        workers.put(worker)
                         break
 
             threads = []
@@ -444,7 +443,6 @@ def main(return_results=False, parse_cmd_line=True, config_from_dict=None):
                     t.join()
 
                 num_thread += num_workers
-
 
             # for t in threads:
             #     t.join()
