@@ -138,7 +138,8 @@ class SearchEngineScrape(metaclass=abc.ABCMeta):
         'yandex': {},
         'ask': {},
         'blekko': {},
-        'duckduckgo': {}
+        'duckduckgo': {},
+        'qwant': {}
     }
 
     def __init__(self, config, cache_manager=None, jobs=None, scraper_search=None, session=None, db_lock=None, cache_lock=None,

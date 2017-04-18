@@ -12,9 +12,12 @@ import sys
 import os
 
 try:
+    from pyvirtualdisplay import Display
     from selenium import webdriver
     from selenium.common.exceptions import TimeoutException, WebDriverException
     from selenium.common.exceptions import ElementNotVisibleException
+    from selenium.webdriver.common.proxy import Proxy as FirefoxProxy
+    from selenium.webdriver.common.proxy import ProxyTypeFactory, ProxyType
     from selenium.webdriver.common.keys import Keys
     from selenium.webdriver.common.by import By
     from selenium.webdriver.support.ui import WebDriverWait  # available since 2.4.0
@@ -63,6 +66,7 @@ class SelScrape(SearchEngineScrape, threading.Thread):
         'ask': '#paging div a.txt3.l_nu',
         'blekko': '',
         'duckduckgo': '',
+        'qwant': '',
         'googleimg': '#pnnext',
         'baiduimg': '.n',
     }
@@ -77,6 +81,7 @@ class SelScrape(SearchEngineScrape, threading.Thread):
         'ask': (By.NAME, 'q'),
         'blekko': (By.NAME, 'q'),
         'google': (By.NAME, 'q'),
+        'qwant': (By.NAME, 'q')
         'googleimg': (By.NAME, 'as_q'),
         'baiduimg': (By.NAME, 'word'),
     }
@@ -104,6 +109,7 @@ class SelScrape(SearchEngineScrape, threading.Thread):
         'duckduckgo': 'https://duckduckgo.com/',
         'ask': 'http://ask.com/',
         'blekko': 'http://blekko.com/',
+        'qwant': 'https://www.qwant.com/'
     }
 
     image_search_locations = {
@@ -115,6 +121,7 @@ class SelScrape(SearchEngineScrape, threading.Thread):
         'duckduckgo': None,  # duckduckgo doesnt't support direct image search
         'ask': 'http://www.ask.com/pictures/',
         'blekko': None,
+        'qwant': 'https://www.qwant.com/images',
         'googleimg':'https://www.google.com/advanced_image_search',
         'baiduimg': 'http://image.baidu.com/',
     }
@@ -169,7 +176,7 @@ class SelScrape(SearchEngineScrape, threading.Thread):
         except Exception as e:
             status = str(e)
 
-        if 'ip' in ipinfo and ipinfo['ip']:
+        if 'ip' in ipinfo and ipinfo['ip'] == self.proxy.host:
             online = True
             status = 'Proxy is working.'
         else:
@@ -219,9 +226,7 @@ class SelScrape(SearchEngineScrape, threading.Thread):
                 chrome_ops.add_argument(
                     '--proxy-server={}://{}:{}'.format(self.proxy.proto, self.proxy.host, self.proxy.port))
                 # chrome_ops.add_argument(
-                #     '--disable-setuid-sandbox')
-                chrome_ops.add_argument(
-                    '--no-sandbox')
+                #     '--no-sandbox')
                 self.webdriver = webdriver.Chrome(chrome_options=chrome_ops)
             else:
                 self.webdriver = webdriver.Chrome()#service_log_path='/tmp/chromedriver_log.log')
@@ -234,21 +239,32 @@ class SelScrape(SearchEngineScrape, threading.Thread):
     def _get_Firefox(self):
         try:
             if self.proxy:
+
+                myProxy = str(self.proxy.host) + ":" + str(self.proxy.port)
+
+                firefoxproxy = FirefoxProxy({
+                    'proxyType': ProxyType.MANUAL,
+                    'httpProxy': myProxy,
+                    'ftpProxy': myProxy,
+                    'sslProxy': myProxy,
+                    'noProxy': '' # set this value as desired
+                    })
+
                 profile = webdriver.FirefoxProfile()
                 profile.set_preference("network.proxy.type",
                                        1)  # this means that the proxy is user set, regardless of the type
                 if self.proxy.proto.lower().startswith('socks'):
                     profile.set_preference("network.proxy.socks", self.proxy.host)
-                    profile.set_preference("network.proxy.socks_port", self.proxy.port)
+                    profile.set_preference("network.proxy.socks_port", int(self.proxy.port))
                     profile.set_preference("network.proxy.socks_version", 5 if self.proxy.proto[-1] == '5' else 4)
                     profile.update_preferences()
                 elif self.proxy.proto == 'http':
                     profile.set_preference("network.proxy.http", self.proxy.host)
-                    profile.set_preference("network.proxy.http_port", self.proxy.port)
+                    profile.set_preference("network.proxy.http_port", int(self.proxy.port))
                 else:
                     raise ValueError('Invalid protocol given in proxyfile.')
                 profile.update_preferences()
-                self.webdriver = webdriver.Firefox(firefox_profile=profile)
+                self.webdriver = webdriver.Firefox(firefox_profile=profile, proxy=firefoxproxy)
             else:
                 self.webdriver = webdriver.Firefox()
             return True
@@ -490,10 +506,15 @@ class SelScrape(SearchEngineScrape, threading.Thread):
             elif self.search_engine_name == 'duckduckgo':
                 # no pagination in duckduckgo
                 pass
+            elif self.search_engine_name == 'qwant':
+                # no pagination in qwant
+                pass
             elif self.search_engine_name == 'ask':
                 selector = '#paging .pgcsel .pg'
 
             if self.search_engine_name == 'duckduckgo':
+                time.sleep(1.5)
+            elif self.search_engine_name == 'qwant':
                 time.sleep(1.5)
             else:
 
@@ -619,7 +640,14 @@ class SelScrape(SearchEngineScrape, threading.Thread):
     def run(self):
         """Run the SelScraper."""
 
-        # self._set_xvfb_display()
+        if self.browser_type == 'firefox':
+            # This will display the firefox window, comment out to make it headless
+            # self._set_xvfb_display()
+            pass
+        elif self.browser_type == 'chrome':
+            # This will allow the chrome browser to run headless, comment out to display it
+            display = Display(visible=0, size=(800, 600))
+            display.start()
 
 
         if not self._get_webdriver():
@@ -706,3 +734,17 @@ class AskSelScrape(SelScrape):
                 pass
 
         WebDriverWait(self.webdriver, 5).until(wait_until_keyword_in_url)
+
+
+class QwantSelScrape(SelScrape):
+    pass
+    # def __init__(self, *args, **kwargs):
+    #     SelScrape.__init__(self, *args, **kwargs)
+    #     self.largest_id = 0
+    #
+    # def _goto_next_page(self):
+    #     super().page_down()
+    #     return 'No more results' not in self.html
+    #
+    # def wait_until_serp_loaded(self):
+    #     super()._wait_until_search_input_field_appears()
