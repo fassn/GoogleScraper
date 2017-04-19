@@ -5,6 +5,7 @@ import os
 import re
 import lxml.html
 from lxml.html.clean import Cleaner
+# from lxml.etree import _ElementUnicodeResult
 from urllib.parse import unquote
 import pprint
 from GoogleScraper.database import SearchEngineResultsPage
@@ -235,6 +236,9 @@ class Parser():
         if selector.endswith('::text'):
             try:
                 value = element.xpath(self.css_to_xpath(selector.split('::')[0]))[0].text_content()
+                if not value and isinstance(self, QwantParser):
+                    node = selector.split('::')
+                    value = element.xpath(node[0])[0].text_content()
             except IndexError:
                 pass
         else:
@@ -955,6 +959,85 @@ class BlekkoParser(Parser):
     }
 
 
+class QwantParser(Parser):
+    """Parses SERP pages of the Qwant search engine."""
+
+    search_engine = 'qwant'
+
+    search_types = ['normal']
+
+    num_results_search_selectors = []
+
+    no_results_selector = []
+
+    effective_query_selector = ['']
+
+    # qwant is loads next pages with ajax
+    page_number_selectors = ['']
+
+    normal_search_selectors = {
+        'web': {
+            'de_ip': {
+                'container': '.result_fragment',
+                'result_container': '.result--web',
+                'link': 'h3 > a::attr(href)',
+                'snippet': 'p::text',
+                'title': 'h3 > a::text',
+                'visible_link': '.result__url > span::text'
+            },
+        },
+        'ads_main': {
+            'de_ip': {
+                'container': '.result_fragment',
+                'result_container': '.result--ext',
+                'link': 'h3 > a::attr(href)',
+                'snippet': 'p::text',
+                'title': 'h3 > a > span::text',
+                'visible_link': '.result__url > span.result__url__long::text'
+            },
+        },
+        'news': {
+            'de_ip': {
+                'container': '.result_fragment',
+                'result_container': '.result--news',
+                'link': 'h3 > a::attr(href)',
+                'snippet': 'p::text',
+                'title': 'h3 > a::text',
+                'visible_link': '.result__url > span::text'
+            },
+        },
+        'social': {
+            'de_ip': {
+                'container': '.result_fragment',
+                'result_container': '.result--social',
+                'link': 'h3 > a::attr(href)',
+                'snippet': 'p::text',
+                'title': 'h3 > a::text',
+                'visible_link': '.result__url > span::text'
+            },
+        },
+    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def after_parsing(self):
+        super().after_parsing()
+
+        if self.searchtype == 'normal':
+
+            try:
+                if 'The following results are probably not relevant, please rephrase your query.' in self.dom.xpath(self.css_to_xpath('.no_result'))[0].text_content():
+                    self.no_results = True
+            except:
+                pass
+
+            if self.num_results > 0:
+                self.no_results = False
+            elif self.num_results <= 0:
+                self.no_results = True
+
+
 def get_parser_by_url(url):
     """Get the appropriate parser by an search engine url.
 
@@ -981,6 +1064,8 @@ def get_parser_by_url(url):
         parser = BaiduParser
     elif re.search(r'^https://duckduckgo\.com', url):
         parser = DuckduckgoParser
+    elif re.search(r'^https://qwant\.com', url):
+        parser = QwantParser
     if re.search(r'^http[s]?://[a-z]{2}?\.ask', url):
         parser = AskParser
     if re.search(r'^http[s]?://blekko', url):
@@ -1019,6 +1104,8 @@ def get_parser_by_search_engine(search_engine):
         return AskParser
     elif search_engine == 'blekko':
         return BlekkoParser
+    elif search_engine == 'qwant':
+        return QwantParser
     else:
         raise NoParserForSearchEngineException('No such parser for "{}"'.format(search_engine))
 

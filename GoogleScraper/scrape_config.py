@@ -113,6 +113,9 @@ baidu_search_url = 'http://www.baidu.com/s?'
 # The duckduckgo base search url
 duckduckgo_search_url = 'https://duckduckgo.com/'
 
+# The qwant base search url
+qwant_search_url = 'https://www.qwant.com/'
+
 # duckduckgo url for http mode
 http_duckduckgo_search_url = 'https://duckduckgo.com/html/?'
 

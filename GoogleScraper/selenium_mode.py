@@ -15,7 +15,7 @@ try:
     from pyvirtualdisplay import Display
     from selenium import webdriver
     from selenium.common.exceptions import TimeoutException, WebDriverException
-    from selenium.common.exceptions import ElementNotVisibleException
+    from selenium.common.exceptions import ElementNotVisibleException, StaleElementReferenceException
     from selenium.webdriver.common.proxy import Proxy as FirefoxProxy
     from selenium.webdriver.common.proxy import ProxyTypeFactory, ProxyType
     from selenium.webdriver.common.keys import Keys
@@ -80,8 +80,7 @@ class SelScrape(SearchEngineScrape, threading.Thread):
         'duckduckgo': (By.NAME, 'q'),
         'ask': (By.NAME, 'q'),
         'blekko': (By.NAME, 'q'),
-        'google': (By.NAME, 'q'),
-        'qwant': (By.NAME, 'q')
+        'qwant': (By.NAME, 'q'),
         'googleimg': (By.NAME, 'as_q'),
         'baiduimg': (By.NAME, 'word'),
     }
@@ -515,7 +514,7 @@ class SelScrape(SearchEngineScrape, threading.Thread):
             if self.search_engine_name == 'duckduckgo':
                 time.sleep(1.5)
             elif self.search_engine_name == 'qwant':
-                time.sleep(1.5)
+                time.sleep(5)
             else:
 
                 try:
@@ -586,8 +585,9 @@ class SelScrape(SearchEngineScrape, threading.Thread):
 
                 try:
                     self.search_input.send_keys(self.query + Keys.ENTER)
-                except ElementNotVisibleException:
+                except (ElementNotVisibleException, StaleElementReferenceException):
                     time.sleep(2)
+                    self.search_input = self._wait_until_search_input_field_appears()
                     self.search_input.send_keys(self.query + Keys.ENTER)
 
                 self.requested_at = datetime.datetime.utcnow()
@@ -641,7 +641,6 @@ class SelScrape(SearchEngineScrape, threading.Thread):
         """Run the SelScraper."""
 
         if self.browser_type == 'firefox':
-            # This will display the firefox window, comment out to make it headless
             # self._set_xvfb_display()
             pass
         elif self.browser_type == 'chrome':
@@ -654,7 +653,13 @@ class SelScrape(SearchEngineScrape, threading.Thread):
             raise Exception('{}: Aborting due to no available selenium webdriver.'.format(self.name))
 
         try:
-            self.webdriver.set_window_size(400, 400)
+            if self.search_engine_name == 'qwant':
+                # needs to be set to a larger size, because of the responsive design of the Qwant.
+                # without it, Qwant would display a mobile-like page, preventing us from seeing all the content.
+                self.webdriver.set_window_size(1024, 768)
+            else:
+                self.webdriver.set_window_size(400, 400)
+
             self.webdriver.set_window_position(400 * (self.browser_num % 4), 400 * (math.floor(self.browser_num // 4)))
         except WebDriverException as e:
             logger.debug('Cannot set window size: {}'.format(e))
@@ -738,13 +743,13 @@ class AskSelScrape(SelScrape):
 
 class QwantSelScrape(SelScrape):
     pass
-    # def __init__(self, *args, **kwargs):
-    #     SelScrape.__init__(self, *args, **kwargs)
-    #     self.largest_id = 0
-    #
-    # def _goto_next_page(self):
-    #     super().page_down()
-    #     return 'No more results' not in self.html
-    #
-    # def wait_until_serp_loaded(self):
-    #     super()._wait_until_search_input_field_appears()
+    def __init__(self, *args, **kwargs):
+        SelScrape.__init__(self, *args, **kwargs)
+        # self.largest_id = 0
+
+    def _goto_next_page(self):
+        super().page_down()
+        return 'The following results are probably not relevant, please rephrase your query.' not in self.html
+
+    def wait_until_serp_loaded(self):
+        super()._wait_until_search_input_field_appears()
