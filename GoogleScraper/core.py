@@ -9,13 +9,14 @@ import os
 import queue
 from GoogleScraper.log import setup_logger
 from GoogleScraper.commandline import get_command_line
-from GoogleScraper.database import ScraperSearch, SERP, Link, get_session, fixtures
+from GoogleScraper.database import ScraperSearch, SERP, Link, get_session, fixtures, scraper_searches_serps
 from GoogleScraper.proxies import parse_proxy_file, get_proxies_from_mysql_db, add_proxies_to_db
 from GoogleScraper.caching import CacheManager
 from GoogleScraper.config import get_config
 from GoogleScraper.scrape_jobs import default_scrape_jobs_for_keywords
 from GoogleScraper.scraping import ScrapeWorkerFactory
 from GoogleScraper.output_converter import init_outfile
+from GoogleScraper.output_converter import store_serp_result
 from GoogleScraper.async_mode import AsyncScrapeScheduler
 import logging
 from GoogleScraper.utils import get_base_path
@@ -459,12 +460,38 @@ def main(return_results=False, parse_cmd_line=True, config_from_dict=None):
         else:
             raise Exception('No such scrape_method {}'.format(config.get('scrape_method')))
 
-    from GoogleScraper.output_converter import close_outfile
-    close_outfile()
-
     scraper_search.stopped_searching = datetime.datetime.utcnow()
+
+    if config['keyword_planner']:
+            # @todo: add case when keywords are not contained in a keyword file.
+            kw = '\n'.join(keywords)
+            keyword_planner_results_as_a_dict = {'microsoft': # for test purposes only!
+                {
+                'avg_monthly_search': 200,
+                'competition': 0.7,
+                'suggested_bid': 12},
+                'apple':
+                {
+                'avg_monthly_search': 100,
+                'competition': 0.5,
+                'suggested_bid': 1}
+            }
+            # keyword_planner_results_as_a_dict = KeywordPlannerScraper(kw)
+            for key, value in keyword_planner_results_as_a_dict.items():
+                for s in scraper_search.serps:
+                    if s.scraper_search_id == scraper_search.id:
+                        if s.query == key:
+                            s.competition = keyword_planner_results_as_a_dict[key]['competition']
+                            s.avg_monthly_search = keyword_planner_results_as_a_dict[key]['avg_monthly_search']
+                            s.suggested_bid = keyword_planner_results_as_a_dict[key]['suggested_bid']
+
     session.add(scraper_search)
     session.commit()
+
+    store_serp_result(scraper_search.serps, config, scraper_search)
+
+    from GoogleScraper.output_converter import close_outfile
+    close_outfile()
 
     if return_results:
         return scraper_search

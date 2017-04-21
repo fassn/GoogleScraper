@@ -5,11 +5,9 @@ import os
 import re
 import lxml.html
 from lxml.html.clean import Cleaner
-# from lxml.etree import _ElementUnicodeResult
 from urllib.parse import unquote
 import pprint
 from GoogleScraper.database import SearchEngineResultsPage
-from GoogleScraper.keyword_planner_scraper import KeywordPlannerScraper
 import logging
 from cssselect import HTMLTranslator
 

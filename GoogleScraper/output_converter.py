@@ -88,7 +88,7 @@ def init_outfile(config, force_reload=False):
             outfile = sys.stdout
 
 
-def store_serp_result(serp, config):
+def store_serp_result(serp, config, *args):
     """Store the parsed SERP page.
 
     Stores the results from scraping in the appropriate output format.
@@ -106,21 +106,40 @@ def store_serp_result(serp, config):
     global outfile, output_format
 
     if outfile:
-        data = row2dict(serp)
-        data['results'] = []
-        for link in serp.links:
-            data['results'].append(row2dict(link))
+        if isinstance(serp, list):
+            for s in serp:
+                if s.scraper_search_id == args[0].id:
+                    data = row2dict(s)
+                    data['results'] = []
+                    for link in s.links:
+                        data['results'].append(row2dict(link))
 
-        if output_format == 'json':
-            # The problem here is, that we need to stream write the json data.
-            outfile.write(data)
-        elif output_format == 'csv':
-            outfile.write(data, serp)
-        elif output_format == 'stdout':
-            if config.get('print_results') == 'summarize':
-                print(serp)
-            elif config.get('print_results') == 'all':
-                pprint.pprint(data)
+                    if output_format == 'json':
+                        # The problem here is, that we need to stream write the json data.
+                        outfile.write(data)
+                    elif output_format == 'csv':
+                        outfile.write(data, s)
+                    elif output_format == 'stdout':
+                        if config.get('print_results') == 'summarize':
+                            print(s)
+                        elif config.get('print_results') == 'all':
+                            pprint.pprint(data)
+        else:
+            data = row2dict(serp)
+            data['results'] = []
+            for link in serp.links:
+                data['results'].append(row2dict(link))
+
+            if output_format == 'json':
+                # The problem here is, that we need to stream write the json data.
+                outfile.write(data)
+            elif output_format == 'csv':
+                outfile.write(data, serp)
+            elif output_format == 'stdout':
+                if config.get('print_results') == 'summarize':
+                    print(serp)
+                elif config.get('print_results') == 'all':
+                    pprint.pprint(data)
 
 
 def row2dict(obj):

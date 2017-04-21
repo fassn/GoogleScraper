@@ -29,7 +29,8 @@ except ImportError as ie:
 
 from GoogleScraper.scraping import SearchEngineScrape, SeleniumSearchError, get_base_search_url_by_search_engine, MaliciousRequestDetected
 from GoogleScraper.user_agents import random_user_agent
-from GoogleScraper.database import SearchEngineResultsPage
+from GoogleScraper.database import ScraperSearch, SearchEngineResultsPage
+from GoogleScraper.keyword_planner_scraper import KeywordPlannerScraper
 import logging
 
 
@@ -617,13 +618,7 @@ class SelScrape(SearchEngineScrape, threading.Thread):
                     self.requested_at = datetime.datetime.utcnow()
 
                     if not next_url:
-
-
-            if self.keyword_planner:
-                f = open(self.config['keyword_file'], 'r')
-                keywords = f.readlines()
-                keyword_planner_results_as_a_dict = KeywordPlannerScraper(keywords)
-                SearchEngineResultsPage.set_values_from_keyword_planner(keyword_planner_results_as_a_dict)                       break
+                        break
 
     def page_down(self):
         """Scrolls down a page with javascript.

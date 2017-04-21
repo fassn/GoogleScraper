@@ -8,8 +8,8 @@ import abc
 
 from GoogleScraper.proxies import Proxy
 from GoogleScraper.database import db_Proxy
-from GoogleScraper.output_converter import store_serp_result
 from GoogleScraper.parsing import get_parser_by_search_engine, parse_serp
+from GoogleScraper.output_converter import store_serp_result
 import logging
 
 logger = logging.getLogger(__name__)
@@ -293,7 +293,7 @@ class SearchEngineScrape(metaclass=abc.ABCMeta):
             self.session.add(serp)
             self.session.commit()
 
-            store_serp_result(serp, self.config)
+            # store_serp_result(serp, self.config)
 
             if serp.num_results:
                 return True
