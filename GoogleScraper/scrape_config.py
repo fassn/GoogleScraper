@@ -132,6 +132,9 @@ search_type = 'normal'
 # http_async uses asyncio.
 scrape_method = 'selenium'
 
+# Checks the volume search of the keywords scrape by doing a parallel scrape onto Keyword Planner.
+keyword_planner = False
+
 # If scraping with the own IP address should be allowed.
 # If this is set to False and you don't specify any proxies,
 # GoogleScraper cannot run.

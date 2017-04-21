@@ -249,6 +249,8 @@ class SearchEngineScrape(metaclass=abc.ABCMeta):
 
         self.html = ''
 
+        self.keyword_planner = self.config.get('keyword_planner')
+
     @abc.abstractmethod
     def search(self, *args, **kwargs):
         """Send the search request(s) over the transport."""

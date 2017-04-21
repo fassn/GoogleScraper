@@ -75,6 +75,12 @@ class SearchEngineResultsPage(Base):
 
     query = Column(String)
 
+    avg_monthly_search = Column(Integer, default=-1)
+
+    competition = Column(Integer, default=-1)
+
+    suggested_bid = Column(Integer, default=-1)
+
     # if the query was modified by the search engine because there weren't any
     # results, this variable is set to the query that was used instead.
     # Otherwise it remains empty.
@@ -154,6 +160,19 @@ class SearchEngineResultsPage(Base):
         self.requested_at = scraper.requested_at
         self.requested_by = scraper.requested_by
         self.status = scraper.status
+
+    def set_values_from_keyword_planner(self, keyword_planner_results_as_a_dict):
+        """Populate itself from a dict object from KeywordPlannerScraper.
+
+        Args:
+            A dict object.
+        """
+
+        for key, value in keyword_planner_results_as_a_dict.items():
+            if keyword_planner_results_as_a_dict[key] == self.query:
+                self.avg_monthly_search = keyword_planner_results_as_a_dict[key]['avg_monthly_search']
+                self.competition = keyword_planner_results_as_a_dict[key]['competition']
+                self.suggested_bid = keyword_planner_results_as_a_dict[key]['suggested_bid']
 
     def was_correctly_requested(self):
         return self.status == 'successful'

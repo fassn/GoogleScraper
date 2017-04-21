@@ -9,6 +9,7 @@ from lxml.html.clean import Cleaner
 from urllib.parse import unquote
 import pprint
 from GoogleScraper.database import SearchEngineResultsPage
+from GoogleScraper.keyword_planner_scraper import KeywordPlannerScraper
 import logging
 from cssselect import HTMLTranslator
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from .core import main
+from core import main
 
 """
 This file is executed by the toolchain and used as a entry point.
