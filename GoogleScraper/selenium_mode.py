@@ -29,8 +29,6 @@ except ImportError as ie:
 
 from GoogleScraper.scraping import SearchEngineScrape, SeleniumSearchError, get_base_search_url_by_search_engine, MaliciousRequestDetected
 from GoogleScraper.user_agents import random_user_agent
-from GoogleScraper.database import ScraperSearch, SearchEngineResultsPage
-from GoogleScraper.keyword_planner_scraper import KeywordPlannerScraper
 import logging
 
 

@@ -5,11 +5,20 @@ import random
 import time
 import os
 import abc
+import csv
+import codecs
+from glob import glob
 
 from GoogleScraper.proxies import Proxy
 from GoogleScraper.database import db_Proxy
 from GoogleScraper.parsing import get_parser_by_search_engine, parse_serp
-from GoogleScraper.output_converter import store_serp_result
+
+from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait  # available since 2.4.0
+from selenium.webdriver.support import expected_conditions as EC  # available since 2.26.0
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -476,3 +485,153 @@ class ScrapeWorkerFactory():
                 )
 
         return None
+
+class KeywordPlannerScraper():
+
+    """Scrape keywords volume search and average bids on Keyword Planner.
+
+        Args:
+            Keywords input into Keyword planner. Same keywords as the scrapejob.
+
+        @todo: need to set a limit as Keyword Planner only accepts 700 keywords or so per query.
+        """
+    def __init__(self):
+        self.selector = {
+            'signin_link': '//*[@id="header-links"]/a[1]',
+            'email': 'Email',
+            'next_button': 'next',
+            'pw': 'Passwd',
+            'signin_button': 'signIn',
+            'search_volume': 'spkc-d',
+            'textarea': 'gwt-debug-upload-text-box',
+            'get_search_volume': 'gwt-debug-upload-ideas-button-content',
+            'get_search_volume_failed': 'spcf-b',
+            'download': 'gwt-debug-search-download-button',
+            'download_link': 'gwt-debug-download-button-content',
+            'downloadfailed': 'spee-b',
+            'savefile': 'gwt-debug-retrieve-download-content',
+        }
+    def keyword_planner_scraper(self, keywords):
+        # creates the webdriver instance with a profile to prevent the Save Dialog from appearing
+        profile = webdriver.FirefoxProfile()
+        profile.set_preference("browser.download.folderList",2)
+        profile.set_preference("browser.download.manager.showWhenStarting", False)
+        profile.set_preference("browser.download.dir", os.getcwd())
+        profile.set_preference("browser.helperApps.neverAsk.saveToDisk",'text/csv')
+        driver = webdriver.Firefox(firefox_profile=profile)
+        driver.get('https://adwords.google.com/KeywordPlanner')
+
+        # click on the 'Sign In' link on top right of the page
+        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, self.selector['signin_link'])))
+        signin_link = driver.find_element_by_xpath(self.selector['signin_link'])
+        signin_link.click()
+
+        # fill in the Email form
+        WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.ID, self.selector['email'])))
+        email = driver.find_element_by_id(self.selector['email'])
+        email.send_keys(os.environ.get('MAIL_USERNAME'))
+
+        # click on the Next button
+        WebDriverWait(driver, 3).until(EC.element_to_be_clickable((By.ID, self.selector['next_button'])))
+        next_button = driver.find_element_by_id(self.selector['next_button'])
+        next_button.click()
+
+        # fill in the Password form
+        WebDriverWait(driver, 3).until(EC.visibility_of_element_located((By.ID, self.selector['pw'])))
+        pw = driver.find_element_by_id(self.selector['pw'])
+        pw.send_keys(os.environ.get('MAIL_PASSWORD'))
+
+        # click on the 'Sign In' button
+        WebDriverWait(driver, 3).until(EC.element_to_be_clickable((By.ID, self.selector['signin_button'])))
+        signin = driver.find_element_by_id(self.selector['signin_button'])
+        signin.click()
+
+        # click on the tool 'Get search volume data and trends'
+        WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.CLASS_NAME, self.selector['search_volume'])))
+        search_volume = driver.find_elements_by_class_name(self.selector['search_volume'])
+        search_volume[1].click()
+
+        # fill in the Keywords form
+        WebDriverWait(driver, 3).until(EC.visibility_of_element_located((By.ID, self.selector['textarea'])))
+        textarea = driver.find_element_by_id(self.selector['textarea'])
+        textarea.send_keys(keywords)
+
+        # click on 'Get search volume'
+        WebDriverWait(driver, 3).until(EC.element_to_be_clickable((By.ID, self.selector['get_search_volume'])))
+        get_search_volume = driver.find_element_by_id(self.selector['get_search_volume'])
+        get_search_volume.click()
+
+        # this loop makes sure Keyword Planner does get the volume search for the keywords.
+        # Sometimes it fails so it will loop until we get the results
+        try:
+            while True:
+                time.sleep(5)
+                # WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.CLASS_NAME, self.selector['get_search_volume_failed'])))
+                get_search_volume_failed = driver.find_elements_by_class_name(self.selector['get_search_volume_failed'])
+                if get_search_volume_failed[0].text == 'There was a problem retrieving ideas, please try again.':
+                    time.sleep(5)
+                    get_search_volume = driver.find_element_by_id(self.selector['get_search_volume'])
+                    get_search_volume.click()
+                else:
+                    break
+        except NoSuchElementException:
+            pass
+
+        # click on the Download button
+        WebDriverWait(driver, 30).until(EC.element_to_be_clickable((By.ID, self.selector['download'])))
+        download = driver.find_element_by_id(self.selector['download'])
+        download.click()
+
+        # a popup should appear about our download, this clicks on the new Download button
+        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, self.selector['download_link'])))
+        download_link = driver.find_element_by_id(self.selector['download_link'])
+        download_link.click()
+
+        # this loop makes sure Keyword Planner does prepare our output file.
+        # Sometimes it fails so it will loop until it works
+        try:
+            while True:
+                time.sleep(5)
+                # WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.CLASS_NAME, self.selector['downloadfailed'])))
+                downloadfailed = driver.find_elements_by_class_name(self.selector['downloadfailed'])
+                if downloadfailed[0].text == 'Your download operation failed. Please try again.':
+                    time.sleep(5)
+                    download_link = driver.find_element_by_id(self.selector['download_link'])
+                    download_link.click()
+                else:
+                    break
+        except NoSuchElementException:
+            pass
+
+        # click on the final 'Save file' button
+        WebDriverWait(driver, 3).until(EC.element_to_be_clickable((By.ID, self.selector['savefile'])))
+        savefile = driver.find_element_by_id(self.selector['savefile'])
+        savefile.click()
+
+
+        """parse the newly Keyword Planner output file into a dict"""
+        # these 2 lines help to find the file we just downloaded,
+        # since it is not possible to change the filename at save
+        time.sleep(5)
+        d = datetime.datetime.now()
+        dday = '0' + str(d.day) if len(str(d.day)) == 1 else str(d.day)
+        dmonth = '0' + str(d.month) if len(str(d.month)) == 1 else str(d.month)
+        filename = glob('Keyword Planner ' + str(d.year) + '-' + str(dmonth) + '-' + str(dday) + ' at ' + '*.csv')[0]
+
+        keyword_planner_results_as_a_dict = {}
+
+        with codecs.open(filename, 'r', encoding='utf-16') as f:
+            results=csv.DictReader(f, dialect='excel-tab')
+            for r in results:
+                keyword_planner_results_as_a_dict['Keyword'] = r['Keyword']
+                keyword_planner_results_as_a_dict[r['Keyword']] = {
+                    'avg_monthly_search': r['Avg. Monthly Searches (exact match only)'],
+                    'competition': r['Competition'],
+                    'suggested_bid': r['Suggested bid']
+                }
+
+        os.remove(filename)
+
+        driver.quit()
+
+        return keyword_planner_results_as_a_dict
