@@ -493,7 +493,6 @@ class KeywordPlannerScraper():
         Args:
             Keywords input into Keyword planner. Same keywords as the scrapejob.
 
-        @todo: need to set a limit as Keyword Planner only accepts 700 keywords or so per query.
         """
     def __init__(self):
         self.selector = {
@@ -511,7 +510,34 @@ class KeywordPlannerScraper():
             'downloadfailed': 'spee-b',
             'savefile': 'gwt-debug-retrieve-download-content',
         }
+
     def keyword_planner_scraper(self, keywords):
+        # do the actual work
+        driver = self.login_keyword_planner()
+
+        if isinstance(keywords, list):
+            results = {}
+            while len(keywords) > 0:
+                self.drive_into_keyword_planner(driver, keywords)
+                results.update(self.parse_results_keyword_planner())
+                keywords.pop(0)
+                if len(keywords) > 0:
+                    driver.get('https://adwords.google.com/KeywordPlanner')
+        else:
+            self.drive_into_keyword_planner(driver, keywords)
+            results = self.parse_results_keyword_planner()
+
+
+        driver.quit()
+        return results
+
+    def login_keyword_planner(self):
+
+        """log into Google's Keyword Planner tool. Your username (typically a gmail account)
+        and password needs to be stored into environment variables. Respectively under MAIL_USERNAME and
+        MAIL_PASSWORD.
+        """
+
         # creates the webdriver instance with a profile to prevent the Save Dialog from appearing
         profile = webdriver.FirefoxProfile()
         profile.set_preference("browser.download.folderList",2)
@@ -546,6 +572,9 @@ class KeywordPlannerScraper():
         signin = driver.find_element_by_id(self.selector['signin_button'])
         signin.click()
 
+        return driver
+
+    def drive_into_keyword_planner(self, driver, keywords):
         # click on the tool 'Get search volume data and trends'
         WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.CLASS_NAME, self.selector['search_volume'])))
         search_volume = driver.find_elements_by_class_name(self.selector['search_volume'])
@@ -608,30 +637,29 @@ class KeywordPlannerScraper():
         savefile = driver.find_element_by_id(self.selector['savefile'])
         savefile.click()
 
+    def parse_results_keyword_planner(self):
 
         """parse the newly Keyword Planner output file into a dict"""
+
         # these 2 lines help to find the file we just downloaded,
         # since it is not possible to change the filename at save
         time.sleep(5)
         d = datetime.datetime.now()
         dday = '0' + str(d.day) if len(str(d.day)) == 1 else str(d.day)
         dmonth = '0' + str(d.month) if len(str(d.month)) == 1 else str(d.month)
-        filename = glob('Keyword Planner ' + str(d.year) + '-' + str(dmonth) + '-' + str(dday) + ' at ' + '*.csv')[0]
-
+        filenames = glob('Keyword Planner ' + str(d.year) + '-' + str(dmonth) + '-' + str(dday) + ' at ' + '*.csv')
         keyword_planner_results_as_a_dict = {}
 
-        with codecs.open(filename, 'r', encoding='utf-16') as f:
-            results=csv.DictReader(f, dialect='excel-tab')
-            for r in results:
-                keyword_planner_results_as_a_dict['Keyword'] = r['Keyword']
-                keyword_planner_results_as_a_dict[r['Keyword']] = {
-                    'avg_monthly_search': r['Avg. Monthly Searches (exact match only)'],
-                    'competition': r['Competition'],
-                    'suggested_bid': r['Suggested bid']
-                }
-
-        os.remove(filename)
-
-        driver.quit()
+        for filename in filenames:
+            with codecs.open(filename, 'r', encoding='utf-16') as f:
+                results=csv.DictReader(f, dialect='excel-tab')
+                for r in results:
+                    keyword_planner_results_as_a_dict['Keyword'] = r['Keyword']
+                    keyword_planner_results_as_a_dict[r['Keyword']] = {
+                        'avg_monthly_search': r['Avg. Monthly Searches (exact match only)'],
+                        'competition': r['Competition'],
+                        'suggested_bid': r['Suggested bid']
+                    }
+            os.remove(filename)
 
         return keyword_planner_results_as_a_dict
