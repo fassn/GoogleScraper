@@ -41,6 +41,7 @@ class ScraperSearch(Base):
     number_search_queries = Column(Integer)
     started_searching = Column(DateTime, default=datetime.datetime.utcnow)
     stopped_searching = Column(DateTime)
+    keyword_planner_checked = Column(Boolean, default=False)
 
     serps = relationship(
         'SearchEngineResultsPage',

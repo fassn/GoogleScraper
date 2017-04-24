@@ -18,6 +18,7 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait  # available since 2.4.0
 from selenium.webdriver.support import expected_conditions as EC  # available since 2.26.0
+from selenium.webdriver.common.keys import Keys
 
 import logging
 
@@ -511,9 +512,9 @@ class KeywordPlannerScraper():
             'savefile': 'gwt-debug-retrieve-download-content',
         }
 
-    def keyword_planner_scraper(self, keywords):
+    def keyword_planner_scraper(self, keywords, browser):
         # do the actual work
-        driver = self.login_keyword_planner()
+        driver = self.login_keyword_planner(browser)
 
         if isinstance(keywords, list):
             results = {}
@@ -531,7 +532,7 @@ class KeywordPlannerScraper():
         driver.quit()
         return results
 
-    def login_keyword_planner(self):
+    def login_keyword_planner(self, browser):
 
         """log into Google's Keyword Planner tool. Your username (typically a gmail account)
         and password needs to be stored into environment variables. Respectively under MAIL_USERNAME and
@@ -539,12 +540,44 @@ class KeywordPlannerScraper():
         """
 
         # creates the webdriver instance with a profile to prevent the Save Dialog from appearing
-        profile = webdriver.FirefoxProfile()
-        profile.set_preference("browser.download.folderList",2)
-        profile.set_preference("browser.download.manager.showWhenStarting", False)
-        profile.set_preference("browser.download.dir", os.getcwd())
-        profile.set_preference("browser.helperApps.neverAsk.saveToDisk",'text/csv')
-        driver = webdriver.Firefox(firefox_profile=profile)
+        if browser == 'chrome':
+            try:
+
+                chromeOptions = webdriver.ChromeOptions()
+                prefs = {"download.default_directory" : os.getcwd()}
+                chromeOptions.add_experimental_option('prefs',prefs)
+
+                driver = webdriver.Chrome(chrome_options=chromeOptions)
+
+            except WebDriverException as e:
+                # we don't have a chrome executable or a chrome webdriver installed
+                raise
+
+        elif browser == 'phantomjs':
+            try:
+
+                dcap = dict(DesiredCapabilities.PHANTOMJS)
+                dcap["phantomjs.page.settings.userAgent"] = random_user_agent(only_desktop=True)
+
+                driver = webdriver.PhantomJS(desired_capabilities=dcap)
+
+            except WebDriverException as e:
+                logger.error(e)
+
+        elif browser == 'firefox':
+            try:
+
+                profile = webdriver.FirefoxProfile()
+                profile.set_preference("browser.download.folderList",2)
+                profile.set_preference("browser.download.manager.showWhenStarting", False)
+                profile.set_preference("browser.download.dir", os.getcwd())
+                profile.set_preference("browser.helperApps.neverAsk.saveToDisk",'text/csv')
+
+                driver = webdriver.Firefox(firefox_profile=profile)
+
+            except WebDriverException as e:
+                logger.error(e)
+
         driver.get('https://adwords.google.com/KeywordPlanner')
 
         # click on the 'Sign In' link on top right of the page
@@ -555,22 +588,22 @@ class KeywordPlannerScraper():
         # fill in the Email form
         WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.ID, self.selector['email'])))
         email = driver.find_element_by_id(self.selector['email'])
-        email.send_keys(os.environ.get('MAIL_USERNAME'))
+        email.send_keys(os.environ.get('MAIL_USERNAME') + Keys.ENTER)
 
-        # click on the Next button
-        WebDriverWait(driver, 3).until(EC.element_to_be_clickable((By.ID, self.selector['next_button'])))
-        next_button = driver.find_element_by_id(self.selector['next_button'])
-        next_button.click()
+        # # click on the Next button
+        # WebDriverWait(driver, 3).until(EC.element_to_be_clickable((By.ID, self.selector['next_button'])))
+        # next_button = driver.find_element_by_id(self.selector['next_button'])
+        # next_button.click()
 
         # fill in the Password form
         WebDriverWait(driver, 3).until(EC.visibility_of_element_located((By.ID, self.selector['pw'])))
         pw = driver.find_element_by_id(self.selector['pw'])
-        pw.send_keys(os.environ.get('MAIL_PASSWORD'))
+        pw.send_keys(os.environ.get('MAIL_PASSWORD') + Keys.ENTER)
 
-        # click on the 'Sign In' button
-        WebDriverWait(driver, 3).until(EC.element_to_be_clickable((By.ID, self.selector['signin_button'])))
-        signin = driver.find_element_by_id(self.selector['signin_button'])
-        signin.click()
+        # # click on the 'Sign In' button
+        # WebDriverWait(driver, 3).until(EC.element_to_be_clickable((By.ID, self.selector['signin_button'])))
+        # signin = driver.find_element_by_id(self.selector['signin_button'])
+        # signin.click()
 
         return driver
 

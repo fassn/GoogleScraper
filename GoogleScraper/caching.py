@@ -409,8 +409,7 @@ class CacheManager():
 
                 if num_cached % 200 == 0:
                     session.commit()
-
-                store_serp_result(serp, self.config)
+                # store_serp_result(serp, self.config)
                 num_cached += 1
                 scrape_jobs.remove(job)
 

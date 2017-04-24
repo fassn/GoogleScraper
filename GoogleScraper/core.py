@@ -463,31 +463,36 @@ def main(return_results=False, parse_cmd_line=True, config_from_dict=None):
     scraper_search.stopped_searching = datetime.datetime.utcnow()
 
     if config['keyword_planner']:
-        # @todo: add case when keywords are not contained in a keyword file.
-        if len(keywords) > 1000:
-            totalkw = len(keywords)
-            kw = []
-            while totalkw >= 0:
-                kw1 = set()
-                n=0
-                for k in keywords:
-                    if n <= 1000:
-                        kw1.add(k)
-                        n+=1
-                kw.append('\n'.join(kw1))
-                totalkw -= 1000
-        else:
-            kw = '\n'.join(keywords)
+        if not scraper_search.keyword_planner_checked:
+            browser = config['sel_browser']
 
-        KPS = KeywordPlannerScraper()
-        keyword_planner_results_as_a_dict = KPS.keyword_planner_scraper(kw)
-        for key, value in keyword_planner_results_as_a_dict.items():
-            for s in scraper_search.serps:
-                if s.scraper_search_id == scraper_search.id:
-                    if s.query == key:
-                        s.competition = keyword_planner_results_as_a_dict[key]['competition']
-                        s.avg_monthly_search = keyword_planner_results_as_a_dict[key]['avg_monthly_search']
-                        s.suggested_bid = keyword_planner_results_as_a_dict[key]['suggested_bid']
+            # @todo: add case when keywords are not contained in a keyword file.
+            if len(keywords) > 1000:
+                totalkw = len(keywords)
+                kw = []
+                while totalkw >= 0:
+                    kw1 = set()
+                    n=0
+                    for k in keywords:
+                        if n <= 1000:
+                            kw1.add(k)
+                            n+=1
+                    kw.append('\n'.join(kw1))
+                    totalkw -= 1000
+            else:
+                kw = '\n'.join(keywords)
+
+            KPS = KeywordPlannerScraper()
+            keyword_planner_results_as_a_dict = KPS.keyword_planner_scraper(kw, browser)
+            for key, value in keyword_planner_results_as_a_dict.items():
+                for s in scraper_search.serps:
+                    if s.scraper_search_id == scraper_search.id:
+                        if s.query == key:
+                            s.competition = keyword_planner_results_as_a_dict[key]['competition']
+                            s.avg_monthly_search = keyword_planner_results_as_a_dict[key]['avg_monthly_search']
+                            s.suggested_bid = keyword_planner_results_as_a_dict[key]['suggested_bid']
+            scraper_search.keyword_planner_checked  = True
+
 
     session.add(scraper_search)
     session.commit()

@@ -140,7 +140,7 @@ class AsyncScrapeScheduler(object):
                             self.session.add(serp)
                             self.session.commit()
 
-                        store_serp_result(serp, self.config)
+                        # store_serp_result(serp, self.config)
 
 
 if __name__ == '__main__':

@@ -130,7 +130,7 @@ class SelScrape(SearchEngineScrape, threading.Thread):
 
         Args:
             captcha_lock: To sync captcha solving (stdin)
-            proxy: Optional, if set, use the proxy to route all scrapign through it.
+            proxy: Optional, if set, use the proxy to route all scraping through it.
             browser_num: A unique, semantic number for each thread.
         """
         self.search_input = None
@@ -227,8 +227,10 @@ class SelScrape(SearchEngineScrape, threading.Thread):
                 # chrome_ops.add_argument(
                 #     '--no-sandbox')
                 self.webdriver = webdriver.Chrome(chrome_options=chrome_ops)
+                time.sleep(1)
             else:
                 self.webdriver = webdriver.Chrome()#service_log_path='/tmp/chromedriver_log.log')
+                time.sleep(1)
             return True
         except WebDriverException as e:
             # we don't have a chrome executable or a chrome webdriver installed
@@ -518,13 +520,18 @@ class SelScrape(SearchEngineScrape, threading.Thread):
             else:
 
                 try:
-                    WebDriverWait(self.webdriver, 5).\
+                    WebDriverWait(self.webdriver, 15).\
             until(EC.text_to_be_present_in_element((By.CSS_SELECTOR, selector), str(self.page_number)))
                 except TimeoutException as e:
                     self._save_debug_screenshot()
-                    content = self.webdriver.find_element_by_css_selector(selector).text
-                    raise Exception('Pagenumber={} did not appear in navigation. Got "{}" instead'\
-                                    .format(self.page_number), content)
+                    # if a TimeoutException occurs, it pretty much means we stumbled upon a reCaptcha.
+                    # This needs to be solved, depending on the manual_captcha_solving setting
+                    # The proxy used for the request needs to be set on hold for some time.
+                    self.search_input = self.handle_request_denied()
+                    WebDriverWait(self.webdriver, 15).\
+            until(EC.text_to_be_present_in_element((By.CSS_SELECTOR, selector), str(self.page_number)))
+                    # raise Exception('Pagenumber={} did not appear in navigation. Got "{}" instead'\
+                    #                 .format(self.page_number), content)
 
         elif self.search_type == 'image':
             self.wait_until_title_contains_keyword()
@@ -641,12 +648,13 @@ class SelScrape(SearchEngineScrape, threading.Thread):
         """Run the SelScraper."""
 
         if self.browser_type == 'firefox':
-            # self._set_xvfb_display()
+            self._set_xvfb_display()
             pass
         elif self.browser_type == 'chrome':
             # This will allow the chrome browser to run headless, comment out to display it
-            display = Display(visible=0, size=(800, 600))
-            display.start()
+            # display = Display(visible=0, size=(800, 600))
+            # display.start()
+            pass
 
 
         if not self._get_webdriver():
