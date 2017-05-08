@@ -144,7 +144,7 @@ class CacheManager():
         Clean the cache.
 
         Clean all cached searches (the obtained html code) in the cache directory iff
-        the respective files are older than specified in the configuration. Defaults to 12 hours.
+        the respective files are older than specified in the configuration. Defaults to 48 hours.
         """
         cachedir = self.config.get('cachedir', '.scrapecache')
         if os.path.exists(cachedir):

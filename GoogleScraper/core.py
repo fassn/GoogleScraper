@@ -277,6 +277,9 @@ def main(return_results=False, parse_cmd_line=True, config_from_dict=None):
         cache_manager.clean_cachefiles()
         return
 
+    # cleaning cache if files are older than 48h.
+    cache_manager.maybe_clean_cache()
+
     if config.get('check_oto', False):
         cache_manager._caching_is_one_to_one(keyword)
 
@@ -284,6 +287,7 @@ def main(return_results=False, parse_cmd_line=True, config_from_dict=None):
         raise WrongConfigurationError('Not more that 100 results per page available for searches.')
 
     proxies = []
+    proxy_quarantine = []
 
     if proxy_db:
         proxies = get_proxies_from_mysql_db(proxy_db)
@@ -404,6 +408,8 @@ def main(return_results=False, parse_cmd_line=True, config_from_dict=None):
                                     cache_manager=cache_manager,
                                     mode=method,
                                     proxy=proxy,
+                                    proxies=proxies,
+                                    proxy_quarantine=proxy_quarantine,
                                     search_engine=search_engine,
                                     session=session,
                                     db_lock=db_lock,
@@ -415,13 +421,19 @@ def main(return_results=False, parse_cmd_line=True, config_from_dict=None):
                             )
                     )
 
-# here we look for suitable workers
-            # for all jobs created.
+            # here we look for suitable workers for all jobs created.
             for job in scrape_jobs:
                 while True:
+                    # this gets one item from the queue
                     worker = workers.get()
+
+                    # this if condition simply checks if the job provides a search_engine and a scrape_method.
                     if worker.is_suitabe(job):
+
+                        # if yes, this function appends the page_number to the keyword job (self.job[query])
                         worker.add_job(job)
+
+                        # then simply puts back the item back to the workers queue
                         workers.put(worker)
                         break
 
@@ -450,6 +462,7 @@ def main(return_results=False, parse_cmd_line=True, config_from_dict=None):
 
             # after threads are done, stop the progress queue.
             q.put('done')
+            # Blocks until all items in the queue have been gotten and processed.
             progress_thread.join()
 
         elif method == 'http-async':

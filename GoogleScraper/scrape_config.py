@@ -87,7 +87,7 @@ google_ip_file = ''
 # List of supported search engines
 # If you add support for another search engine (of course implement it in the
 # appropriate places) add it in this list.
-supported_search_engines = ['google', 'yandex', 'bing', 'yahoo', 'baidu', 'duckduckgo', 'ask']
+supported_search_engines = ['google', 'yandex', 'bing', 'yahoo', 'baidu', 'duckduckgo', 'ask', 'qwant']
 
 # The search engine(s) to use. For the supported search engines, see above "supported_search_engines"
 search_engines = ['google', ]
@@ -132,7 +132,8 @@ search_type = 'normal'
 # http_async uses asyncio.
 scrape_method = 'selenium'
 
-# Checks the volume search of the keywords scrape by doing a parallel scrape onto Keyword Planner.
+# Checks the volume search of the keywords scrape by doing a parallel scrape onto Keyword Planner
+# using a Selenium instance.
 keyword_planner = False
 
 # If scraping with the own IP address should be allowed.
@@ -260,7 +261,9 @@ sel_browser = 'Chrome'
 # Set to False to disable.
 # If the captcha isn't solved in the specified time interval, the browser instance
 # with the current proxy is discarded.
-manual_captcha_solving = False
+# /!\ This only works for text captchas, not for NoCaptcha, nor the new Recaptcha based on image puzzles.
+# Basically not useful for Google captchas.
+text_captcha_solving = False
 
 # Xvfb display option
 # You should start xvfb at your own

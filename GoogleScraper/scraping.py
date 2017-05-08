@@ -125,7 +125,7 @@ class SearchEngineScrape(metaclass=abc.ABCMeta):
     (An attribute name self.search_engine) and handle the different search
     engines in the search function.
     
-    Each mode must behave similarly: It can only scape one search engine at the same time,
+    Each mode must behave similarly: It can only scrape one search engine at the same time,
     but it may search for multiple search keywords. The initial start number may be
     set by the configuration. The number of pages that should be scraped for each
     keyword is also configurable.
@@ -153,7 +153,8 @@ class SearchEngineScrape(metaclass=abc.ABCMeta):
     }
 
     def __init__(self, config, cache_manager=None, jobs=None, scraper_search=None, session=None, db_lock=None, cache_lock=None,
-                 start_page_pos=1, search_engine=None, search_type=None, proxy=None, progress_queue=None):
+                 start_page_pos=1, search_engine=None, search_type=None, proxy=None, proxies=None, proxy_quarantine=None,
+                 progress_queue=None):
         """Instantiate an SearchEngineScrape object.
 
         Args:
@@ -215,6 +216,9 @@ class SearchEngineScrape(metaclass=abc.ABCMeta):
             self.requested_by = self.proxy.host + ':' + self.proxy.port
         else:
             self.requested_by = 'localhost'
+
+        self.proxies = proxies
+        self.proxy_quarantine = proxy_quarantine
 
         # the scraper_search object
         self.scraper_search = scraper_search
@@ -416,13 +420,16 @@ from GoogleScraper.selenium_mode import get_selenium_scraper_by_search_engine_na
 
 
 class ScrapeWorkerFactory():
-    def __init__(self, config, cache_manager=None, mode=None, proxy=None, search_engine=None, session=None, db_lock=None,
-                 cache_lock=None, scraper_search=None, captcha_lock=None, progress_queue=None, browser_num=1):
+    def __init__(self, config, cache_manager=None, mode=None, proxy=None, proxies=None, proxy_quarantine=None,
+                 search_engine=None, session=None, db_lock=None, cache_lock=None, scraper_search=None,
+                 captcha_lock=None, progress_queue=None, browser_num=1):
 
         self.config = config
         self.cache_manager = cache_manager
         self.mode = mode
         self.proxy = proxy
+        self.proxies = proxies
+        self.proxy_quarantine = proxy_quarantine
         self.search_engine = search_engine
         self.session = session
         self.db_lock = db_lock
@@ -465,6 +472,8 @@ class ScrapeWorkerFactory():
                     cache_lock=self.cache_lock,
                     db_lock=self.db_lock,
                     proxy=self.proxy,
+                    proxies=self.proxies,
+                    proxy_quarantine=self.proxy_quarantine,
                     progress_queue=self.progress_queue,
                     captcha_lock=self.captcha_lock,
                     browser_num=self.browser_num,
